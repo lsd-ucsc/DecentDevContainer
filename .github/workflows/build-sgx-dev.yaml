@@ -1,4 +1,4 @@
-name: Build and Publish Docker image
+name: build_push_sgx_dev_img
 
 
 on:
