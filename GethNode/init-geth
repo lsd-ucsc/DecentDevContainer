@@ -1,0 +1,10 @@
+#!/bin/bash
+
+set -e
+
+if [[ ! -f /geth/jwt.hex ]]; then
+	echo "JWT not found, generating..."
+	openssl rand -hex 32 | tr -d "\n" > "/geth/jwt.hex"
+fi
+
+/bin/test.sh --existing-arg1 --existing-arg2 ${GETH_OPTS}

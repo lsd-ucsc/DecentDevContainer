@@ -1,0 +1,22 @@
+#! /bin/bash
+
+# Copyright (c) 2023 Haofan Zheng
+# Use of this source code is governed by an MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
+
+set -e
+
+# initialize ssh host keys
+if [ ! -f /etc/ssh/ssh_host_ed25519_key ]; then
+	ssh-keygen -A
+fi
+
+# start necessary services
+service aesmd start
+
+# set environment variables
+source /opt/intel/sgxsdk/environment
+
+# initialization finished, hand over to bash
+exec $@

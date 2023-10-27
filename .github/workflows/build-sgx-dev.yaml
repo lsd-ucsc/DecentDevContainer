@@ -1,0 +1,146 @@
+name: Build and Publish Docker image
+
+
+on:
+  release:
+    types: [published]
+  push:
+    branches:
+      - main
+    paths:
+      - SGXDev/**
+      - SGXSolDev/**
+      - .github/workflows/build-sgx-dev.yaml
+
+
+jobs:
+  build_sgx_dev:
+    name: Build and publish SGX Dev image
+    runs-on: ubuntu-22.04
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate package repo name
+        id: ghcr_repo
+        run: echo "path=ghcr.io/${{ github.repository_owner }}/decent-sgxdev" | tr '[:upper:]' '[:lower:]' >> $GITHUB_OUTPUT
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ steps.ghcr_repo.outputs.path }}
+
+      - name: Get current commit SHA short
+        id: commit_sha
+        run: echo "short=$(git rev-parse --short HEAD)" | tr '[:upper:]' '[:lower:]' >> $GITHUB_OUTPUT
+
+      - name: Manually generate sha tag
+        id: tag_sha
+        run: echo "tag=${{ steps.ghcr_repo.outputs.path }}:${{ steps.commit_sha.outputs.short }}" >> $GITHUB_OUTPUT
+
+      - name: Manually generate ver tag
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        id: tag_ver
+        run: echo "tag=${{ steps.ghcr_repo.outputs.path }}:${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker images for each commit
+        uses: docker/build-push-action@v5
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        with:
+          context: ./SGXDev
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ steps.tag_sha.outputs.tag }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Create and push a manifest with ver referencing latest commit
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          docker buildx imagetools create \
+            -t ${{ steps.tag_ver.outputs.tag }} \
+            ${{ steps.tag_sha.outputs.tag }}
+
+
+  build_sgx_sol_dev:
+    name: Build and publish SGX Solidity Dev image
+    needs: [ build_sgx_dev ]
+    runs-on: ubuntu-22.04
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate package repo name
+        id: ghcr_repo
+        run: echo "path=ghcr.io/${{ github.repository_owner }}/decent-sgxsoldev" | tr '[:upper:]' '[:lower:]' >> $GITHUB_OUTPUT
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ steps.ghcr_repo.outputs.path }}
+
+      - name: Get current commit SHA short
+        id: commit_sha
+        run: echo "short=$(git rev-parse --short HEAD)" | tr '[:upper:]' '[:lower:]' >> $GITHUB_OUTPUT
+
+      - name: Manually generate sha tag
+        id: tag_sha
+        run: echo "tag=${{ steps.ghcr_repo.outputs.path }}:${{ steps.commit_sha.outputs.short }}" >> $GITHUB_OUTPUT
+
+      - name: Manually generate ver tag
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        id: tag_ver
+        run: echo "tag=${{ steps.ghcr_repo.outputs.path }}:${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker images for each commit
+        uses: docker/build-push-action@v5
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        with:
+          context: ./SGXSolDev
+          platforms: linux/amd64
+          build-args: |
+            BASE_IMG_TAG=${{ steps.commit_sha.outputs.short }}
+          push: true
+          tags: |
+            ${{ steps.tag_sha.outputs.tag }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Create and push a manifest with ver referencing latest commit
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          docker buildx imagetools create \
+            -t ${{ steps.tag_ver.outputs.tag }} \
+            ${{ steps.tag_sha.outputs.tag }}
+

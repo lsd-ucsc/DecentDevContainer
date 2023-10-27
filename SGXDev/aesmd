@@ -1,0 +1,82 @@
+#! /bin/sh
+
+### BEGIN INIT INFO
+# Provides:		aesmd
+# Required-Start:	$remote_fs $syslog
+# Required-Stop:	$remote_fs $syslog
+# Default-Start:	2 3 4 5
+# Default-Stop:
+# Short-Description:	Intel(R) Architectural Enclave Service Manager
+### END INIT INFO
+
+set -e
+
+export NAME="aesm_service"
+export AESM_PATH="/opt/intel/sgx-aesm-service/aesm"
+export LD_LIBRARY_PATH="/opt/intel/sgx-aesm-service/aesm"
+
+test -x /opt/intel/sgx-aesm-service/aesm/aesm_service || exit 1
+
+. /lib/lsb/init-functions
+
+link_sgx() {
+	/opt/intel/sgx-aesm-service/aesm/linksgx.sh
+}
+
+check_dirs() {
+	mkdir -p /var/run/aesmd/
+	chown -R aesmd:aesmd /var/run/aesmd/
+	chmod 0755 /var/run/aesmd/
+
+	mkdir -p /var/opt/aesmd/
+	chown -R aesmd:aesmd /var/opt/aesmd/
+	chmod 0750 /var/opt/aesmd/
+}
+
+case "$1" in
+  start)
+	check_dirs
+	log_daemon_msg "Starting Intel(R) Architectural Enclave Service Manager" $NAME || true
+	link_sgx
+	if start-stop-daemon --start --quiet --oknodo --background --chuid aesmd:aesmd --chdir $AESM_PATH --pidfile /run/aesmd.pid --make-pidfile --exec $AESM_PATH/$NAME -- --no-daemon; then
+	    log_end_msg 0 || true
+	else
+	    log_end_msg 1 || true
+	fi
+	;;
+
+
+  stop)
+	log_daemon_msg "Stopping Intel(R) Architectural Enclave Service Manager" $NAME || true
+	if start-stop-daemon --stop --pidfile /run/aesmd.pid --remove-pidfile; then
+	    log_end_msg 0 || true
+	else
+	    log_end_msg 1 || true
+	fi
+	;;
+
+
+  restart)
+	check_dirs
+	log_daemon_msg "Restarting Intel(R) Architectural Enclave Service Manager" $NAME || true
+	start-stop-daemon --stop --pidfile /run/aesmd.pid --remove-pidfile
+	link_sgx
+	if start-stop-daemon --start --quiet --oknodo --background --chuid aesmd:aesmd --chdir $AESM_PATH --pidfile /run/aesmd.pid --make-pidfile --exec $AESM_PATH/$NAME -- --no-daemon; then
+	    log_end_msg 0 || true
+	else
+	    log_end_msg 1 || true
+	fi
+	;;
+
+
+  status)
+	status_of_proc -p /run/aesmd.pid $AESM_PATH/$NAME $NAME && exit 0 || exit $?
+	;;
+
+
+  *)
+	log_action_msg "Usage: /etc/init.d/aesmd {start|stop|restart|status}" || true
+	exit 1
+esac
+
+exit 0
