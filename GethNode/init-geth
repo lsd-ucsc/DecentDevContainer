@@ -1,10 +1,84 @@
-#!/bin/bash
+#!/usr/bin/env python3
+# -*- coding:utf-8 -*-
+###
+# Copyright (c) 2023 Haofan Zheng
+# Use of this source code is governed by an MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT.
+###
 
-set -e
 
-if [[ ! -f /geth/jwt.hex ]]; then
-	echo "JWT not found, generating..."
-	openssl rand -hex 32 | tr -d "\n" > "/geth/jwt.hex"
-fi
+import os
+import shlex
+import signal
+import subprocess
+import sys
+import threading
 
-/bin/test.sh --existing-arg1 --existing-arg2 ${GETH_OPTS}
+
+JWT_PATH = os.path.join(os.path.sep, 'geth', 'jwt.hex')
+TERMINATE_EVENT = threading.Event()
+
+
+def OnTerminate():
+	TERMINATE_EVENT.set()
+
+
+def main():
+	if not os.path.isfile(JWT_PATH):
+		with open(JWT_PATH, 'w') as f:
+			f.write(os.urandom(32).hex())
+
+	gethAddArgs = []
+	envVal = os.getenv('GETH_OPTS', None)
+	if envVal is not None:
+		gethAddArgs = shlex.split(envVal)
+
+	gethCmd = [
+		'/usr/bin/geth'
+	] + gethAddArgs
+	gethEnv = {
+		k: v for k, v in os.environ.items() if (k.startswith('GETH_') or k == 'PATH')
+	}
+
+	prysmAddArgs = []
+	envVal = os.getenv('PRYSM_OPTS', None)
+	if envVal is not None:
+		prysmAddArgs = shlex.split(envVal)
+
+	prysmCmd = [
+		'/opt/prysm/prysm.sh',
+	] + prysmAddArgs
+	prysmEnv = {
+		'PATH': os.environ.get('PATH', ''),
+	}
+
+	gethProc = subprocess.Popen(gethCmd, env=gethEnv, stdout=sys.stdout, stderr=sys.stderr)
+	prysmProc = subprocess.Popen(prysmCmd, env=prysmEnv, stdout=sys.stdout, stderr=sys.stderr)
+
+	# register signal handler
+	signal.signal(signal.SIGTERM, OnTerminate)
+	signal.signal(signal.SIGINT, OnTerminate)
+
+	# wait for termination
+	TERMINATE_EVENT.wait()
+
+	# terminate processes
+	while prysmProc.poll() is None:
+		prysmProc.terminate()
+		try:
+			prysmProc.wait(timeout=5)
+		except subprocess.TimeoutExpired:
+			pass
+
+	while gethProc.poll() is None:
+		gethProc.terminate()
+		try:
+			gethProc.wait(timeout=5)
+		except subprocess.TimeoutExpired:
+			pass
+
+
+if __name__ == '__main__':
+	main()
+

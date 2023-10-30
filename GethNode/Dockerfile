@@ -22,14 +22,16 @@ RUN apt-get update -y && \
 
 RUN apt-get update -y && \
 	apt-get install -y \
-		ethereum \
+		ethereum=1.13.4+build29068+jammy \
+		python3 \
+		python3-pip \
 		openssl \
 		curl
 
 
 # Prysm
 RUN mkdir /opt/prysm
-RUN curl https://github.com/prysmaticlabs/prysm/raw/master/prysm.sh \
+RUN curl -L https://github.com/prysmaticlabs/prysm/raw/v4.1.1/prysm.sh \
 	--output /opt/prysm/prysm.sh
 RUN chmod 755 /opt/prysm/prysm.sh
 ################################################################################
@@ -43,8 +45,8 @@ RUN mkdir /geth
 WORKDIR /geth
 
 # test script
-COPY test.sh /bin/test.sh
-RUN chmod 755 /bin/test.sh
+# COPY test.sh /bin/test.sh
+# RUN chmod 755 /bin/test.sh
 
 # entrypoint
 COPY init-geth /bin/init-geth
