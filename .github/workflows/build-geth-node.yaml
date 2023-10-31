@@ -53,6 +53,10 @@ jobs:
         id: tag_sha
         run: echo "tag=${{ steps.ghcr_repo.outputs.path }}:${{ steps.commit_sha.outputs.short }}" >> $GITHUB_OUTPUT
 
+      - name: Manually generate head tag
+        id: tag_head
+        run: echo "tag=${{ steps.ghcr_repo.outputs.path }}:head" >> $GITHUB_OUTPUT
+
       - name: Manually generate ver tag
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         id: tag_ver
@@ -67,6 +71,7 @@ jobs:
           push: true
           tags: |
             ${{ steps.tag_sha.outputs.tag }}
+            ${{ steps.tag_head.outputs.tag }}
           labels: ${{ steps.meta.outputs.labels }}
 
       - name: Create and push a manifest with ver referencing latest commit
@@ -74,5 +79,5 @@ jobs:
         run: |
           docker buildx imagetools create \
             -t ${{ steps.tag_ver.outputs.tag }} \
-            ${{ steps.tag_sha.outputs.tag }}
+            ${{ steps.tag_head.outputs.tag }}
 
