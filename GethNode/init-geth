@@ -24,23 +24,31 @@ def OnTerminate():
 	TERMINATE_EVENT.set()
 
 
-def main():
-	if not os.path.isfile(JWT_PATH):
-		with open(JWT_PATH, 'w') as f:
-			f.write(os.urandom(32).hex())
-
+def RunExecCltGeth() -> subprocess.Popen:
 	gethAddArgs = []
 	envVal = os.getenv('GETH_OPTS', None)
 	if envVal is not None:
 		gethAddArgs = shlex.split(envVal)
 
 	gethCmd = [
-		'/usr/bin/geth'
+		'/usr/bin/geth',
+		'--authrpc.jwtsecret', '/geth/jwt.hex',
 	] + gethAddArgs
+
 	gethEnv = {
 		k: v for k, v in os.environ.items() if (k.startswith('GETH_') or k == 'PATH')
 	}
 
+	gethProc = subprocess.Popen(
+		gethCmd,
+		env=gethEnv,
+		stdout=sys.stdout,
+		stderr=sys.stderr
+	)
+	return gethProc
+
+
+def RunConsCltPrysm() -> subprocess.Popen:
 	prysmAddArgs = []
 	envVal = os.getenv('PRYSM_OPTS', None)
 	if envVal is not None:
@@ -48,35 +56,97 @@ def main():
 
 	prysmCmd = [
 		'/opt/prysm/prysm.sh',
+		'beacon-chain',
+		'--jwt-secret=/geth/jwt.hex',
+		'--execution-endpoint=http://localhost:8551',
 	] + prysmAddArgs
+
 	prysmEnv = {
 		'PATH': os.environ.get('PATH', ''),
 	}
 
-	gethProc = subprocess.Popen(gethCmd, env=gethEnv, stdout=sys.stdout, stderr=sys.stderr)
-	prysmProc = subprocess.Popen(prysmCmd, env=prysmEnv, stdout=sys.stdout, stderr=sys.stderr)
+	prysmProc = subprocess.Popen(
+		prysmCmd,
+		env=prysmEnv,
+		stdout=sys.stdout,
+		stderr=sys.stderr
+	)
+	return prysmProc
 
-	# register signal handler
-	signal.signal(signal.SIGTERM, OnTerminate)
-	signal.signal(signal.SIGINT, OnTerminate)
 
-	# wait for termination
-	TERMINATE_EVENT.wait()
+def RunConsCltLighthouse() -> subprocess.Popen:
+	lighthouseAddArgs = []
+	envVal = os.getenv('LIGHTHOUSE_OPTS', None)
+	if envVal is not None:
+		lighthouseAddArgs = shlex.split(envVal)
 
-	# terminate processes
-	while prysmProc.poll() is None:
-		prysmProc.terminate()
+	lighthouseCmd = [
+		'/opt/lighthouse/lighthouse',
+		'beacon_node',
+		'--execution-endpoint', 'http://localhost:8551',
+		'--execution-jwt', '/geth/jwt.hex',
+	] + lighthouseAddArgs
+
+	lighthouseEnv = {
+		'PATH': os.environ.get('PATH', ''),
+	}
+
+	lighthouseProc = subprocess.Popen(
+		lighthouseCmd,
+		env=lighthouseEnv,
+		stdout=sys.stdout,
+		stderr=sys.stderr
+	)
+	return lighthouseProc
+
+
+def TerminateProc(proc: subprocess.Popen) -> None:
+	while proc.poll() is None:
+		proc.terminate()
 		try:
-			prysmProc.wait(timeout=5)
+			proc.wait(timeout=5)
 		except subprocess.TimeoutExpired:
 			pass
 
-	while gethProc.poll() is None:
-		gethProc.terminate()
-		try:
-			gethProc.wait(timeout=5)
-		except subprocess.TimeoutExpired:
-			pass
+
+def main():
+	if not os.path.isfile(JWT_PATH):
+		with open(JWT_PATH, 'w') as f:
+			f.write(os.urandom(32).hex())
+
+	execCltProc = None
+	consCltProc = None
+	valiCltProc = None
+
+	try:
+		execCltSelect = os.getenv('ETH_EXEC_CLT', None)
+		if execCltSelect == 'geth':
+			execCltProc = RunExecCltGeth()
+		else:
+			raise RuntimeError(
+				'Unknown execution client selection: {}'.format(execCltSelect)
+			)
+
+		consCltSelect = os.getenv('ETH_CONS_CLT', None)
+		if consCltSelect == 'prysm':
+			consCltProc = RunConsCltPrysm()
+		elif consCltSelect == 'lighthouse':
+			consCltProc = RunConsCltLighthouse()
+		else:
+			raise RuntimeError(
+				'Unknown consensus client selection: {}'.format(consCltSelect)
+			)
+
+		# register signal handler
+		signal.signal(signal.SIGTERM, OnTerminate)
+		signal.signal(signal.SIGINT, OnTerminate)
+
+		# wait for termination
+		TERMINATE_EVENT.wait()
+	finally:
+		# terminate processes
+		TerminateProc(consCltProc)
+		TerminateProc(execCltProc)
 
 
 if __name__ == '__main__':
