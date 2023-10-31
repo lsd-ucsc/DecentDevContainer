@@ -100,6 +100,31 @@ def RunConsCltLighthouse() -> subprocess.Popen:
 	return lighthouseProc
 
 
+def RunValiCltLighthouse() -> subprocess.Popen:
+	lighthouseAddArgs = []
+	envVal = os.getenv('V_LIGHTHOUSE_OPTS', None)
+	if envVal is not None:
+		lighthouseAddArgs = shlex.split(envVal)
+
+	lighthouseCmd = [
+		'/opt/lighthouse/lighthouse',
+		'validator_client',
+		'--beacon-nodes', 'http://localhost:5052',
+	] + lighthouseAddArgs
+
+	lighthouseEnv = {
+		'PATH': os.environ.get('PATH', ''),
+	}
+
+	lighthouseProc = subprocess.Popen(
+		lighthouseCmd,
+		env=lighthouseEnv,
+		stdout=sys.stdout,
+		stderr=sys.stderr
+	)
+	return lighthouseProc
+
+
 def TerminateProc(proc: subprocess.Popen) -> None:
 	while proc.poll() is None:
 		proc.terminate()
@@ -137,6 +162,16 @@ def main():
 				'Unknown consensus client selection: {}'.format(consCltSelect)
 			)
 
+		valiCltSelect = os.getenv('ETH_VALI_CLT', None)
+		if valiCltSelect == 'lighthouse':
+			valiCltProc = RunValiCltLighthouse()
+		elif valiCltSelect is not None:
+			raise RuntimeError(
+				'Unknown validator client selection: {}'.format(valiCltSelect)
+			)
+		else:
+			print('Validator client disabled.')
+
 		# register signal handler
 		signal.signal(signal.SIGTERM, OnTerminate)
 		signal.signal(signal.SIGINT, OnTerminate)
@@ -147,6 +182,8 @@ def main():
 		# terminate processes
 		TerminateProc(consCltProc)
 		TerminateProc(execCltProc)
+		if valiCltProc is not None:
+			TerminateProc(valiCltProc)
 
 
 if __name__ == '__main__':
