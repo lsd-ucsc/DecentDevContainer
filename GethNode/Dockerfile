@@ -21,7 +21,7 @@ RUN apt-get update -y && \
 	add-apt-repository -y ppa:ethereum/ethereum
 
 # Geth
-ARG ETH_VER=1.13.4+build29068+jammy
+ARG ETH_VER=1.13.11+build29387+jammy
 RUN apt-get update -y && \
 	apt-get install -y \
 		ethereum=${ETH_VER} \
@@ -31,14 +31,14 @@ RUN apt-get update -y && \
 		curl
 
 # Prysm
-ARG PRYSM_VER=v4.1.1
+ARG PRYSM_VER=v4.2.0
 RUN mkdir /opt/prysm
 RUN curl -L https://github.com/prysmaticlabs/prysm/raw/${PRYSM_VER}/prysm.sh \
 	--output /opt/prysm/prysm.sh
 RUN chmod 755 /opt/prysm/prysm.sh
 
 # Lighthouse
-ARG LIGHTHOUSE_VER=v4.5.0
+ARG LIGHTHOUSE_VER=v4.6.0
 RUN mkdir /opt/lighthouse
 RUN curl -L https://github.com/sigp/lighthouse/releases/download/${LIGHTHOUSE_VER}/lighthouse-${LIGHTHOUSE_VER}-$(uname -m)-unknown-linux-gnu.tar.gz \
 	--output /opt/lighthouse/lighthouse-linux-gnu.tar.gz
