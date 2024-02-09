@@ -38,7 +38,7 @@ RUN rm /etc/ssh/ssh_host_*
 # SGX PSW
 RUN curl \
 	-o /opt/sgx_debian_local_repo.tgz \
-	-fSL https://download.01.org/intel-sgx/latest/linux-latest/distro/ubuntu22.04-server/sgx_debian_local_repo.tgz
+	-fSL https://download.01.org/intel-sgx/sgx-linux/2.23/distro/ubuntu22.04-server/sgx_debian_local_repo.tgz
 
 RUN tar -xzf /opt/sgx_debian_local_repo.tgz -C /opt
 RUN echo 'deb [arch=amd64 trusted=yes] file:/opt/sgx_debian_local_repo/ jammy main' > /etc/apt/sources.list.d/intel-sgx.list
@@ -57,10 +57,10 @@ RUN chmod 755 /etc/init.d/aesmd
 
 # SGX SDK
 RUN curl \
-	-o /opt/sgx_linux_x64_sdk_2.20.100.4.bin \
-	-fSL https://download.01.org/intel-sgx/latest/linux-latest/distro/ubuntu22.04-server/sgx_linux_x64_sdk_2.20.100.4.bin
-RUN chmod 755 /opt/sgx_linux_x64_sdk_2.20.100.4.bin
-RUN /opt/sgx_linux_x64_sdk_2.20.100.4.bin --prefix /opt/intel
+	-o /opt/sgx_linux_x64_sdk.bin \
+	-fSL https://download.01.org/intel-sgx/sgx-linux/2.23/distro/ubuntu22.04-server/sgx_linux_x64_sdk_2.23.100.2.bin
+RUN chmod 755 /opt/sgx_linux_x64_sdk.bin
+RUN /opt/sgx_linux_x64_sdk.bin --prefix /opt/intel
 
 # APT clean up
 RUN apt-get autoremove -y
