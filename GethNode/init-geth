@@ -31,7 +31,7 @@ def RunExecCltGeth() -> subprocess.Popen:
 		gethAddArgs = shlex.split(envVal)
 
 	gethCmd = [
-		'/usr/bin/geth',
+		'/opt/geth/geth',
 		'--authrpc.jwtsecret', '/geth/jwt.hex',
 	] + gethAddArgs
 
@@ -196,8 +196,10 @@ def main():
 			TERMINATE_EVENT.wait(1.0)
 	finally:
 		# terminate processes
-		TerminateProc(consCltProc)
-		TerminateProc(execCltProc)
+		if execCltProc is not None:
+			TerminateProc(execCltProc)
+		if consCltProc is not None:
+			TerminateProc(consCltProc)
 		if valiCltProc is not None:
 			TerminateProc(valiCltProc)
 
