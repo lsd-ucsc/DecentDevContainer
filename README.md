@@ -27,6 +27,7 @@ docker build \
 
 ```sh
 docker build \
+	--progress=plain \
 	-t ghcr.io/lsd-ucsc/decent-gethnode:local \
 	./GethNode
 ```

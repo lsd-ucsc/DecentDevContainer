@@ -9,39 +9,43 @@ ENV DEBIAN_FRONTEND=noninteractive
 
 ############################### Install packages ###############################
 RUN apt-get update -y && \
-	apt-get install -y \
-		apt-utils \
-		lsb-release
-
-RUN apt-get update -y && \
 	apt-get upgrade -y
 
 RUN apt-get update -y && \
-	apt-get install -y software-properties-common && \
-	add-apt-repository -y ppa:ethereum/ethereum
-
-# Geth
-ARG ETH_VER=1.13.11+build29387+jammy
-RUN apt-get update -y && \
 	apt-get install -y \
-		ethereum=${ETH_VER} \
+		apt-utils \
+		lsb-release \
 		python3 \
 		python3-pip \
 		openssl \
 		curl
 
+# Geth
+ARG ETH_VER=1.13.14-2bd6bd01
+RUN mkdir /opt/geth
+RUN curl -fsSL https://gethstore.blob.core.windows.net/builds/geth-alltools-linux-amd64-${ETH_VER}.tar.gz \
+	--output /opt/geth/geth.tar.gz
+RUN echo $(sha256sum /opt/geth/geth.tar.gz)
+RUN echo $(md5sum /opt/geth/geth.tar.gz)
+RUN tar -xvzf /opt/geth/geth.tar.gz -C /opt/geth --strip-components=1
+ENV PATH="/opt/geth:${PATH}"
+
 # Prysm
-ARG PRYSM_VER=v4.2.0
+ARG PRYSM_VER=v5.0.0
 RUN mkdir /opt/prysm
 RUN curl -L https://github.com/prysmaticlabs/prysm/raw/${PRYSM_VER}/prysm.sh \
 	--output /opt/prysm/prysm.sh
+RUN echo $(sha256sum /opt/prysm/prysm.sh)
+RUN echo $(md5sum /opt/prysm/prysm.sh)
 RUN chmod 755 /opt/prysm/prysm.sh
 
 # Lighthouse
-ARG LIGHTHOUSE_VER=v4.6.0
+ARG LIGHTHOUSE_VER=v5.0.0
 RUN mkdir /opt/lighthouse
 RUN curl -L https://github.com/sigp/lighthouse/releases/download/${LIGHTHOUSE_VER}/lighthouse-${LIGHTHOUSE_VER}-$(uname -m)-unknown-linux-gnu.tar.gz \
 	--output /opt/lighthouse/lighthouse-linux-gnu.tar.gz
+RUN echo $(sha256sum /opt/lighthouse/lighthouse-linux-gnu.tar.gz)
+RUN echo $(md5sum /opt/lighthouse/lighthouse-linux-gnu.tar.gz)
 RUN tar -xvf /opt/lighthouse/lighthouse-linux-gnu.tar.gz -C /opt/lighthouse
 RUN chmod 755 /opt/lighthouse/lighthouse
 
@@ -53,6 +57,8 @@ RUN export ARCH=`uname -m | sed s/aarch64/arm64/ | sed s/x86_64/amd64/` && \
 	curl -L https://github.com/ethereum/staking-deposit-cli/releases/download/${STAKE_CLI_VER}/staking_deposit-cli-${STAKE_CLI_HASH}-linux-${ARCH}.tar.gz \
 	--output /opt/staking-deposit-cli/staking-deposit-cli.tar.gz && \
 	export ARCH=""
+RUN echo $(sha256sum /opt/staking-deposit-cli/staking-deposit-cli.tar.gz)
+RUN echo $(md5sum /opt/staking-deposit-cli/staking-deposit-cli.tar.gz)
 RUN tar -xvf /opt/staking-deposit-cli/staking-deposit-cli.tar.gz --strip-components=2 -C /opt/staking-deposit-cli
 ################################################################################
 
