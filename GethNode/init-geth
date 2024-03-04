@@ -177,7 +177,23 @@ def main():
 		signal.signal(signal.SIGINT, OnTerminate)
 
 		# wait for termination
-		TERMINATE_EVENT.wait()
+		while not TERMINATE_EVENT.is_set():
+			if execCltProc is not None and execCltProc.poll() is not None:
+				raise RuntimeError(
+					f'Execution client process terminated with code '
+					f'{execCltProc.returncode}'
+				)
+			if consCltProc is not None and consCltProc.poll() is not None:
+				raise RuntimeError(
+					f'Consensus client process terminated with code '
+					f'{consCltProc.returncode}'
+				)
+			if valiCltProc is not None and valiCltProc.poll() is not None:
+				raise RuntimeError(
+					f'Validator client process terminated with code '
+					f'{valiCltProc.returncode}'
+				)
+			TERMINATE_EVENT.wait(1.0)
 	finally:
 		# terminate processes
 		TerminateProc(consCltProc)
