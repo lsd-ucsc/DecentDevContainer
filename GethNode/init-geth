@@ -134,6 +134,41 @@ def TerminateProc(proc: subprocess.Popen) -> None:
 			pass
 
 
+def StartExecClt() -> subprocess.Popen:
+	execCltSelect = os.getenv('ETH_EXEC_CLT', None)
+	if execCltSelect == 'geth':
+		execCltProc = RunExecCltGeth()
+	else:
+		raise RuntimeError(
+			'Unknown execution client selection: {}'.format(execCltSelect)
+		)
+	return execCltProc
+
+def StartConsClt() -> subprocess.Popen:
+	consCltSelect = os.getenv('ETH_CONS_CLT', None)
+	if consCltSelect == 'prysm':
+		consCltProc = RunConsCltPrysm()
+	elif consCltSelect == 'lighthouse':
+		consCltProc = RunConsCltLighthouse()
+	else:
+		raise RuntimeError(
+			'Unknown consensus client selection: {}'.format(consCltSelect)
+		)
+	return consCltProc
+
+def StartValiClt() -> subprocess.Popen:
+	valiCltProc = None
+	valiCltSelect = os.getenv('ETH_VALI_CLT', None)
+	if valiCltSelect == 'lighthouse':
+		valiCltProc = RunValiCltLighthouse()
+	elif valiCltSelect is not None:
+		raise RuntimeError(
+			'Unknown validator client selection: {}'.format(valiCltSelect)
+		)
+	else:
+		print('Validator client disabled.')
+	return valiCltProc
+
 def main():
 	if not os.path.isfile(JWT_PATH):
 		with open(JWT_PATH, 'w') as f:
@@ -144,33 +179,11 @@ def main():
 	valiCltProc = None
 
 	try:
-		execCltSelect = os.getenv('ETH_EXEC_CLT', None)
-		if execCltSelect == 'geth':
-			execCltProc = RunExecCltGeth()
-		else:
-			raise RuntimeError(
-				'Unknown execution client selection: {}'.format(execCltSelect)
-			)
+		execCltProc = StartExecClt()
 
-		consCltSelect = os.getenv('ETH_CONS_CLT', None)
-		if consCltSelect == 'prysm':
-			consCltProc = RunConsCltPrysm()
-		elif consCltSelect == 'lighthouse':
-			consCltProc = RunConsCltLighthouse()
-		else:
-			raise RuntimeError(
-				'Unknown consensus client selection: {}'.format(consCltSelect)
-			)
+		consCltProc = StartConsClt()
 
-		valiCltSelect = os.getenv('ETH_VALI_CLT', None)
-		if valiCltSelect == 'lighthouse':
-			valiCltProc = RunValiCltLighthouse()
-		elif valiCltSelect is not None:
-			raise RuntimeError(
-				'Unknown validator client selection: {}'.format(valiCltSelect)
-			)
-		else:
-			print('Validator client disabled.')
+		valiCltProc = StartValiClt()
 
 		# register signal handler
 		signal.signal(signal.SIGTERM, OnTerminate)
@@ -179,20 +192,26 @@ def main():
 		# wait for termination
 		while not TERMINATE_EVENT.is_set():
 			if execCltProc is not None and execCltProc.poll() is not None:
-				raise RuntimeError(
-					f'Execution client process terminated with code '
+				print(
+					f'ERROR: Execution client process terminated with code '
 					f'{execCltProc.returncode}'
 				)
+				# reboot execution client
+				execCltProc = StartExecClt()
 			if consCltProc is not None and consCltProc.poll() is not None:
-				raise RuntimeError(
-					f'Consensus client process terminated with code '
+				print(
+					f'ERROR: Consensus client process terminated with code '
 					f'{consCltProc.returncode}'
 				)
+				# reboot consensus client
+				consCltProc = StartConsClt()
 			if valiCltProc is not None and valiCltProc.poll() is not None:
-				raise RuntimeError(
-					f'Validator client process terminated with code '
+				print(
+					f'ERROR: Validator client process terminated with code '
 					f'{valiCltProc.returncode}'
 				)
+				# reboot validator client
+				valiCltProc = StartValiClt()
 			TERMINATE_EVENT.wait(1.0)
 	finally:
 		# terminate processes
