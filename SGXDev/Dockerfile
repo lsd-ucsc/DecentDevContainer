@@ -20,6 +20,7 @@ RUN apt-get update -y && \
 	apt-get install -y \
 		nano \
 		less \
+		unzip \
 		net-tools \
 		iputils-ping \
 		git \
@@ -27,6 +28,7 @@ RUN apt-get update -y && \
 		build-essential \
 		cmake=3.22.1-1ubuntu1.22.04.1 \
 		python3=3.10.6-1~22.04 \
+		python3-venv=3.10.6-1~22.04 \
 		python3-pip=22.0.2+dfsg-1ubuntu0.4
 
 # SSH Server

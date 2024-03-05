@@ -30,6 +30,8 @@ RUN echo $(md5sum /opt/geth/geth.tar.gz)
 RUN tar -xvzf /opt/geth/geth.tar.gz -C /opt/geth --strip-components=1
 ENV PATH="/opt/geth:${PATH}"
 
+EXPOSE 8545
+
 # Prysm
 ARG PRYSM_VER=v5.0.0
 RUN mkdir /opt/prysm
