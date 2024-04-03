@@ -21,6 +21,7 @@ RUN apt-get update -y && \
 		curl
 
 # Geth
+# found at https://geth.ethereum.org/downloads
 ARG ETH_VER=1.13.14-2bd6bd01
 RUN mkdir /opt/geth
 RUN curl -fsSL https://gethstore.blob.core.windows.net/builds/geth-alltools-linux-amd64-${ETH_VER}.tar.gz \
@@ -33,7 +34,7 @@ ENV PATH="/opt/geth:${PATH}"
 EXPOSE 8545
 
 # Prysm
-ARG PRYSM_VER=v5.0.0
+ARG PRYSM_VER=v5.0.2
 RUN mkdir /opt/prysm
 RUN curl -L https://github.com/prysmaticlabs/prysm/raw/${PRYSM_VER}/prysm.sh \
 	--output /opt/prysm/prysm.sh
@@ -42,7 +43,7 @@ RUN echo $(md5sum /opt/prysm/prysm.sh)
 RUN chmod 755 /opt/prysm/prysm.sh
 
 # Lighthouse
-ARG LIGHTHOUSE_VER=v5.0.0
+ARG LIGHTHOUSE_VER=v5.1.3
 RUN mkdir /opt/lighthouse
 RUN curl -L https://github.com/sigp/lighthouse/releases/download/${LIGHTHOUSE_VER}/lighthouse-${LIGHTHOUSE_VER}-$(uname -m)-unknown-linux-gnu.tar.gz \
 	--output /opt/lighthouse/lighthouse-linux-gnu.tar.gz
