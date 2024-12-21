@@ -36,6 +36,7 @@ RUN apt install -y nodejs=20.5.1-deb-1nodesource1
 
 # Node.js packages
 RUN npm install -g ganache@7.9.2
+RUN npm install -g @remix-project/remix-tests@0.2.50
 
 # Solc compiler
 RUN curl -fsSL -o /bin/solc https://github.com/ethereum/solidity/releases/download/v0.8.24/solc-static-linux
