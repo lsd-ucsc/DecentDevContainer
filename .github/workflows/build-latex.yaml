@@ -15,7 +15,7 @@ on:
 jobs:
   build_latex_amd64:
     name: Build and publish LaTex image (amd64)
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       packages: write
       contents: read
@@ -77,7 +77,7 @@ jobs:
 
   build_latex_arm64:
     name: Build and publish LaTex image (arm64)
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04-arm
     permissions:
       packages: write
       contents: read
@@ -140,7 +140,7 @@ jobs:
   push_multi_arch_manifest:
     name: Push Docker multi-arch manifest to Container registry
     needs: [build_latex_amd64, build_latex_arm64]
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       packages: write
       contents: read
