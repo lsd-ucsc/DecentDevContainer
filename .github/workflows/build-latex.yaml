@@ -8,7 +8,7 @@ on:
     branches:
       - main
     paths:
-      - LaTex/**
+      - LaTexBase/**
       - .github/workflows/build-latex.yaml
 
 
@@ -36,7 +36,7 @@ jobs:
 
       - name: Generate package repo name
         id: ghcr_repo
-        run: echo "path=ghcr.io/${{ github.repository_owner }}/decent-latex" | tr '[:upper:]' '[:lower:]' >> $GITHUB_OUTPUT
+        run: echo "path=ghcr.io/${{ github.repository_owner }}/decent-latex-base" | tr '[:upper:]' '[:lower:]' >> $GITHUB_OUTPUT
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
@@ -66,7 +66,7 @@ jobs:
         uses: docker/build-push-action@v5
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         with:
-          context: ./LaTex
+          context: ./LaTexBase
           platforms: linux/amd64
           push: true
           tags: |
@@ -105,7 +105,7 @@ jobs:
 
       - name: Generate package repo name
         id: ghcr_repo
-        run: echo "path=ghcr.io/${{ github.repository_owner }}/decent-latex" | tr '[:upper:]' '[:lower:]' >> $GITHUB_OUTPUT
+        run: echo "path=ghcr.io/${{ github.repository_owner }}/decent-latex-base" | tr '[:upper:]' '[:lower:]' >> $GITHUB_OUTPUT
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
@@ -135,7 +135,7 @@ jobs:
         uses: docker/build-push-action@v5
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         with:
-          context: ./LaTex
+          context: ./LaTexBase
           platforms: linux/arm64
           push: true
           tags: |
@@ -175,7 +175,7 @@ jobs:
 
       - name: Generate package repo name
         id: ghcr_repo
-        run: echo "path=ghcr.io/${{ github.repository_owner }}/decent-latex" | tr '[:upper:]' '[:lower:]' >> $GITHUB_OUTPUT
+        run: echo "path=ghcr.io/${{ github.repository_owner }}/decent-latex-base" | tr '[:upper:]' '[:lower:]' >> $GITHUB_OUTPUT
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
