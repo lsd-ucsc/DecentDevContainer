@@ -1,4 +1,4 @@
-name: build_push_latex_img
+name: build_push_latex_base_img
 
 
 on:
@@ -9,7 +9,7 @@ on:
       - main
     paths:
       - LaTexBase/**
-      - .github/workflows/build-latex.yaml
+      - .github/workflows/build-latex-base.yaml
 
 
 jobs:
