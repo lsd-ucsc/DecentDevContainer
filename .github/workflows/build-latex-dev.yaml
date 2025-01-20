@@ -1,0 +1,227 @@
+name: build_push_decent_latex_dev_img
+
+
+on:
+  release:
+    types: [published]
+  push:
+    branches:
+      - main
+    paths:
+      - LaTexDev/**
+      - .github/workflows/build-latex-dev.yaml
+
+
+jobs:
+  build_decent_latex_dev_amd64:
+    name: Build and publish Decent LaTex DevContainer image (amd64)
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate package repo name
+        id: ghcr_repo
+        run: echo "path=ghcr.io/${{ github.repository_owner }}/decent-latex-dev" | tr '[:upper:]' '[:lower:]' >> $GITHUB_OUTPUT
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ steps.ghcr_repo.outputs.path }}
+
+      - name: Get current commit SHA short
+        id: commit_sha
+        run: echo "short=$(git rev-parse --short HEAD)" | tr '[:upper:]' '[:lower:]' >> $GITHUB_OUTPUT
+
+      - name: Manually generate sha tag
+        id: tag_sha
+        run: echo "tag=${{ steps.ghcr_repo.outputs.path }}:${{ steps.commit_sha.outputs.short }}" >> $GITHUB_OUTPUT
+
+      - name: Manually generate head tag
+        id: tag_head
+        run: echo "tag=${{ steps.ghcr_repo.outputs.path }}:head" >> $GITHUB_OUTPUT
+
+      - name: Manually generate ver tag
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        id: tag_ver
+        run: echo "tag=${{ steps.ghcr_repo.outputs.path }}:${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker images for each commit
+        uses: docker/build-push-action@v5
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        with:
+          context: ./LaTexDev
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ steps.tag_sha.outputs.tag }}-amd64
+            ${{ steps.tag_head.outputs.tag }}-amd64
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Create and push a manifest with ver referencing version
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          docker buildx imagetools create \
+            -t ${{ steps.tag_ver.outputs.tag }}-amd64 \
+            ${{ steps.tag_head.outputs.tag }}-amd64
+
+
+  build_decent_latex_dev_arm64:
+    name: Build and publish Decent LaTex DevContainer image (arm64)
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate package repo name
+        id: ghcr_repo
+        run: echo "path=ghcr.io/${{ github.repository_owner }}/decent-latex-dev" | tr '[:upper:]' '[:lower:]' >> $GITHUB_OUTPUT
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ steps.ghcr_repo.outputs.path }}
+
+      - name: Get current commit SHA short
+        id: commit_sha
+        run: echo "short=$(git rev-parse --short HEAD)" | tr '[:upper:]' '[:lower:]' >> $GITHUB_OUTPUT
+
+      - name: Manually generate sha tag
+        id: tag_sha
+        run: echo "tag=${{ steps.ghcr_repo.outputs.path }}:${{ steps.commit_sha.outputs.short }}" >> $GITHUB_OUTPUT
+
+      - name: Manually generate head tag
+        id: tag_head
+        run: echo "tag=${{ steps.ghcr_repo.outputs.path }}:head" >> $GITHUB_OUTPUT
+
+      - name: Manually generate ver tag
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        id: tag_ver
+        run: echo "tag=${{ steps.ghcr_repo.outputs.path }}:${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker images for each commit
+        uses: docker/build-push-action@v5
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        with:
+          context: ./LaTexDev
+          platforms: linux/arm64
+          push: true
+          tags: |
+            ${{ steps.tag_sha.outputs.tag }}-arm64
+            ${{ steps.tag_head.outputs.tag }}-arm64
+          labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Create and push a manifest with ver referencing version
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          docker buildx imagetools create \
+            -t ${{ steps.tag_ver.outputs.tag }}-arm64 \
+            ${{ steps.tag_head.outputs.tag }}-arm64
+
+
+  push_multi_arch_manifest:
+    name: Push Docker multi-arch manifest to Container registry
+    needs: [build_decent_latex_dev_amd64, build_decent_latex_dev_arm64]
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+      contents: read
+
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate package repo name
+        id: ghcr_repo
+        run: echo "path=ghcr.io/${{ github.repository_owner }}/decent-latex-dev" | tr '[:upper:]' '[:lower:]' >> $GITHUB_OUTPUT
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ steps.ghcr_repo.outputs.path }}
+
+      - name: Get current commit SHA short
+        id: commit_sha
+        run: echo "short=$(git rev-parse --short HEAD)" | tr '[:upper:]' '[:lower:]' >> $GITHUB_OUTPUT
+
+      - name: Manually generate sha tag
+        id: tag_sha
+        run: echo "tag=${{ steps.ghcr_repo.outputs.path }}:${{ steps.commit_sha.outputs.short }}" >> $GITHUB_OUTPUT
+
+      - name: Manually generate head tag
+        id: tag_head
+        run: echo "tag=${{ steps.ghcr_repo.outputs.path }}:head" >> $GITHUB_OUTPUT
+
+      - name: Manually generate ver tag
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        id: tag_ver
+        run: echo "tag=${{ steps.ghcr_repo.outputs.path }}:${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create and push a manifest referencing git sha
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          docker buildx imagetools create \
+            -t ${{ steps.tag_sha.outputs.tag }} \
+            ${{ steps.tag_sha.outputs.tag }}-arm64 \
+            ${{ steps.tag_sha.outputs.tag }}-amd64
+
+      - name: Create and push a manifest referencing git head
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          docker buildx imagetools create \
+            -t ${{ steps.tag_head.outputs.tag }} \
+            ${{ steps.tag_head.outputs.tag }}-arm64 \
+            ${{ steps.tag_head.outputs.tag }}-amd64
+
+      - name: Create and push a manifest with ver referencing version
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
+        run: |
+          docker buildx imagetools create \
+            -t ${{ steps.tag_ver.outputs.tag }} \
+            ${{ steps.tag_ver.outputs.tag }}-arm64 \
+            ${{ steps.tag_ver.outputs.tag }}-amd64
+
