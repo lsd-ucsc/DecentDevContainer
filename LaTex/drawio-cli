@@ -1,0 +1,18 @@
+#!/bin/bash
+
+set -e
+
+DRAWIO_BIN=/usr/bin/drawio
+XVFB_RUN_BIN=/usr/bin/xvfb-run
+
+if [ -z $DRAWIO_BIN ]; then
+	echo "Failed to run Drawio - drawio is not installed."
+	exit -1
+fi
+if [ -z $XVFB_RUN_BIN ]; then
+	echo "Failed to run Drawio - xvfb is not installed."
+	exit -1
+fi
+
+$XVFB_RUN_BIN -a $DRAWIO_BIN "$@"
+
